@@ -147,22 +147,16 @@ public class ConsumeMessageConcurrentlyService implements ConsumeMessageService 
         ConsumeMessageDirectlyResult result = new ConsumeMessageDirectlyResult();
         result.setOrder(false);
         result.setAutoCommit(true);
-
         List<MessageExt> msgs = new ArrayList<MessageExt>();
         msgs.add(msg);
         MessageQueue mq = new MessageQueue();
         mq.setBrokerName(brokerName);
         mq.setTopic(msg.getTopic());
         mq.setQueueId(msg.getQueueId());
-
         ConsumeConcurrentlyContext context = new ConsumeConcurrentlyContext(mq);
-
         this.resetRetryTopic(msgs);
-
         final long beginTime = System.currentTimeMillis();
-
         log.info("consumeMessageDirectly receive new message: {}", msg);
-
         try {
             ConsumeConcurrentlyStatus status = this.messageListener.consumeMessage(msgs, context);
             if (status != null) {

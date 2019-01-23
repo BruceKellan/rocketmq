@@ -535,17 +535,12 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner {
         switch (this.serviceState) {
             case CREATE_JUST:
                 this.serviceState = ServiceState.START_FAILED;
-
                 this.checkConfig();
-
                 this.copySubscription();
-
                 if (this.defaultMQPullConsumer.getMessageModel() == MessageModel.CLUSTERING) {
                     this.defaultMQPullConsumer.changeInstanceNameToPID();
                 }
-
                 this.mQClientFactory = MQClientManager.getInstance().getAndCreateMQClientInstance(this.defaultMQPullConsumer, this.rpcHook);
-
                 this.rebalanceImpl.setConsumerGroup(this.defaultMQPullConsumer.getConsumerGroup());
                 this.rebalanceImpl.setMessageModel(this.defaultMQPullConsumer.getMessageModel());
                 this.rebalanceImpl.setAllocateMessageQueueStrategy(this.defaultMQPullConsumer.getAllocateMessageQueueStrategy());
@@ -571,9 +566,7 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner {
                     }
                     this.defaultMQPullConsumer.setOffsetStore(this.offsetStore);
                 }
-
                 this.offsetStore.load();
-
                 boolean registerOK = mQClientFactory.registerConsumer(this.defaultMQPullConsumer.getConsumerGroup(), this);
                 if (!registerOK) {
                     this.serviceState = ServiceState.CREATE_JUST;
@@ -582,7 +575,6 @@ public class DefaultMQPullConsumerImpl implements MQConsumerInner {
                         + "] has been created before, specify another name please." + FAQUrl.suggestTodo(FAQUrl.GROUP_NAME_DUPLICATE_URL),
                         null);
                 }
-
                 mQClientFactory.start();
                 log.info("the consumer [{}] start OK", this.defaultMQPullConsumer.getConsumerGroup());
                 this.serviceState = ServiceState.RUNNING;

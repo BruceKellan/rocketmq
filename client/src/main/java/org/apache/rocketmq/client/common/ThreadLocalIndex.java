@@ -20,10 +20,13 @@ package org.apache.rocketmq.client.common;
 import java.util.Random;
 
 public class ThreadLocalIndex {
+
     private final ThreadLocal<Integer> threadLocalIndex = new ThreadLocal<Integer>();
+
     private final Random random = new Random();
 
     public int getAndIncrement() {
+        // 从0开始
         Integer index = this.threadLocalIndex.get();
         if (null == index) {
             index = Math.abs(random.nextInt());
@@ -31,11 +34,11 @@ public class ThreadLocalIndex {
                 index = 0;
             this.threadLocalIndex.set(index);
         }
-
+        // 往上叠加，超出范围从0重新开始
         index = Math.abs(index + 1);
-        if (index < 0)
+        if (index < 0) {
             index = 0;
-
+        }
         this.threadLocalIndex.set(index);
         return index;
     }

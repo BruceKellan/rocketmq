@@ -26,8 +26,8 @@ import org.apache.rocketmq.remoting.common.RemotingHelper;
  * This class demonstrates how to send messages to brokers using provided {@link DefaultMQProducer}.
  */
 public class Producer {
-    public static void main(String[] args) throws MQClientException, InterruptedException {
 
+    public static void main(String[] args) throws MQClientException, InterruptedException {
         /*
          * Instantiate with a producer group name.
          */
@@ -48,24 +48,19 @@ public class Producer {
         /*
          * Launch the instance.
          */
+        producer.setNamesrvAddr("127.0.0.1:9876");
         producer.start();
 
         for (int i = 0; i < 1000; i++) {
             try {
-
                 /*
                  * Create a message instance, specifying topic, tag and message body.
                  */
-                Message msg = new Message("TopicTest" /* Topic */,
-                    "TagA" /* Tag */,
-                    ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET) /* Message body */
-                );
-
+                Message msg = new Message("TopicTest", "TagA", ("Hello RocketMQ " + i).getBytes(RemotingHelper.DEFAULT_CHARSET));
                 /*
                  * Call send message to deliver message to one of brokers.
                  */
                 SendResult sendResult = producer.send(msg);
-
                 System.out.printf("%s%n", sendResult);
             } catch (Exception e) {
                 e.printStackTrace();

@@ -28,6 +28,7 @@ public interface MQProducerInner {
     boolean isPublishTopicNeedUpdate(final String topic);
 
     TransactionCheckListener checkListener();
+
     TransactionListener getCheckListener();
 
     void checkTransactionState(

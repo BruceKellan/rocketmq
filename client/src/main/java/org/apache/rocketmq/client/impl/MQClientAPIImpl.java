@@ -155,6 +155,7 @@ import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 public class MQClientAPIImpl {
 
     private final static InternalLogger log = ClientLogger.getLog();
+
     private static boolean sendSmartMsg =
         Boolean.parseBoolean(System.getProperty("org.apache.rocketmq.client.sendSmartMsg", "true"));
 
@@ -316,9 +317,7 @@ public class MQClientAPIImpl {
         } else {
             request = RemotingCommand.createRequestCommand(RequestCode.SEND_MESSAGE, requestHeader);
         }
-
         request.setBody(msg.getBody());
-
         switch (communicationMode) {
             case ONEWAY:
                 this.remotingClient.invokeOneway(addr, request, timeoutMillis);
@@ -1198,7 +1197,6 @@ public class MQClientAPIImpl {
 
     public TopicRouteData getTopicRouteInfoFromNameServer(final String topic, final long timeoutMillis)
         throws RemotingException, MQClientException, InterruptedException {
-
         return getTopicRouteInfoFromNameServer(topic, timeoutMillis, true);
     }
 
@@ -1206,9 +1204,7 @@ public class MQClientAPIImpl {
         boolean allowTopicNotExist) throws MQClientException, InterruptedException, RemotingTimeoutException, RemotingSendRequestException, RemotingConnectException {
         GetRouteInfoRequestHeader requestHeader = new GetRouteInfoRequestHeader();
         requestHeader.setTopic(topic);
-
         RemotingCommand request = RemotingCommand.createRequestCommand(RequestCode.GET_ROUTEINTO_BY_TOPIC, requestHeader);
-
         RemotingCommand response = this.remotingClient.invokeSync(null, request, timeoutMillis);
         assert response != null;
         switch (response.getCode()) {
@@ -1216,7 +1212,6 @@ public class MQClientAPIImpl {
                 if (allowTopicNotExist && !topic.equals(MixAll.AUTO_CREATE_TOPIC_KEY_TOPIC)) {
                     log.warn("get Topic [{}] RouteInfoFromNameServer is not exist value", topic);
                 }
-
                 break;
             }
             case ResponseCode.SUCCESS: {
@@ -1228,7 +1223,6 @@ public class MQClientAPIImpl {
             default:
                 break;
         }
-
         throw new MQClientException(response.getCode(), response.getRemark());
     }
 

@@ -38,6 +38,7 @@ import org.apache.rocketmq.remoting.exception.RemotingException;
 import org.apache.rocketmq.remoting.netty.NettyRemotingClient;
 
 /**
+ * Producer的各种配置，包了一层MQProducerInner
  * This class is the entry point for applications intending to send messages.
  * </p>
  *
@@ -134,6 +135,7 @@ public class DefaultMQProducer extends ClientConfig implements MQProducer {
      */
     public DefaultMQProducer(final String producerGroup, RPCHook rpcHook) {
         this.producerGroup = producerGroup;
+        // DefaultMQProducer 对 DefaultMQProducerImpl封装了一层
         defaultMQProducerImpl = new DefaultMQProducerImpl(this, rpcHook);
     }
 

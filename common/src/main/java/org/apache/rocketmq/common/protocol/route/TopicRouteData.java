@@ -26,10 +26,24 @@ import java.util.List;
 import org.apache.rocketmq.remoting.protocol.RemotingSerializable;
 
 public class TopicRouteData extends RemotingSerializable {
+
     private String orderTopicConf;
+
+    /**
+     * 所有的队列信息，节点:队列 = 1:N
+     */
     private List<QueueData> queueDatas;
+
+    /**
+     * broker 节点信息
+     */
     private List<BrokerData> brokerDatas;
-    private HashMap<String/* brokerAddr */, List<String>/* Filter Server */> filterServerTable;
+
+    /**
+     * key: brokerAddr
+     * value: FilterServer
+     */
+    private HashMap<String, List<String>> filterServerTable;
 
     public TopicRouteData cloneTopicRouteData() {
         TopicRouteData topicRouteData = new TopicRouteData();
@@ -37,19 +51,15 @@ public class TopicRouteData extends RemotingSerializable {
         topicRouteData.setBrokerDatas(new ArrayList<BrokerData>());
         topicRouteData.setFilterServerTable(new HashMap<String, List<String>>());
         topicRouteData.setOrderTopicConf(this.orderTopicConf);
-
         if (this.queueDatas != null) {
             topicRouteData.getQueueDatas().addAll(this.queueDatas);
         }
-
         if (this.brokerDatas != null) {
             topicRouteData.getBrokerDatas().addAll(this.brokerDatas);
         }
-
         if (this.filterServerTable != null) {
             topicRouteData.getFilterServerTable().putAll(this.filterServerTable);
         }
-
         return topicRouteData;
     }
 

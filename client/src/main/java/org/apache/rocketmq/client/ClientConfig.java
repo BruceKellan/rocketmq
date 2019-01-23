@@ -54,14 +54,12 @@ public class ClientConfig {
     public String buildMQClientId() {
         StringBuilder sb = new StringBuilder();
         sb.append(this.getClientIP());
-
         sb.append("@");
         sb.append(this.getInstanceName());
         if (!UtilAll.isBlank(this.unitName)) {
             sb.append("@");
             sb.append(this.unitName);
         }
-
         return sb.toString();
     }
 
