@@ -25,6 +25,9 @@ import org.apache.rocketmq.client.log.ClientLogger;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.remoting.RPCHook;
 
+/**
+ * 管理客户端
+ */
 public class MQClientManager {
 
     private final static InternalLogger log = ClientLogger.getLog();

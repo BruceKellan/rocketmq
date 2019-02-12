@@ -31,6 +31,13 @@ import org.apache.rocketmq.remoting.exception.RemotingCommandException;
 import org.apache.rocketmq.logging.InternalLogger;
 import org.apache.rocketmq.logging.InternalLoggerFactory;
 
+/**
+ * 通信协议：
+ * --------------------------------------------------
+ * 消息长度 | 序列化类型&&头部长度 | 消息头数据 | 消息主体数据
+ * 4个字节 |  1个字节&&3个字节   |  header  |  data
+ * --------------------------------------------------
+ */
 public class RemotingCommand {
     public static final String SERIALIZE_TYPE_PROPERTY = "rocketmq.serialize.type";
     public static final String SERIALIZE_TYPE_ENV = "ROCKETMQ_SERIALIZE_TYPE";
@@ -72,6 +79,9 @@ public class RemotingCommand {
     private int code;
     private LanguageCode language = LanguageCode.JAVA;
     private int version = 0;
+    /**
+     * 从0自增的请求标识
+     */
     private int opaque = requestId.getAndIncrement();
     private int flag = 0;
     private String remark;
@@ -142,15 +152,15 @@ public class RemotingCommand {
     }
 
     public static RemotingCommand decode(final ByteBuffer byteBuffer) {
+        // 获取byteBuffer的总长度
         int length = byteBuffer.limit();
+        // 获取前4个字节，组装int类型，该长度为总长度
         int oriHeaderLen = byteBuffer.getInt();
+        // 获取消息头的长度，这里和0xFFFFFF做与运算，编码时候的长度即为24位
         int headerLength = getHeaderLength(oriHeaderLen);
-
         byte[] headerData = new byte[headerLength];
         byteBuffer.get(headerData);
-
         RemotingCommand cmd = headerDecode(headerData, getProtocolType(oriHeaderLen));
-
         int bodyLength = length - 4 - headerLength;
         byte[] bodyData = null;
         if (bodyLength > 0) {
@@ -158,7 +168,6 @@ public class RemotingCommand {
             byteBuffer.get(bodyData);
         }
         cmd.body = bodyData;
-
         return cmd;
     }
 
@@ -179,7 +188,6 @@ public class RemotingCommand {
             default:
                 break;
         }
-
         return null;
     }
 
@@ -210,10 +218,13 @@ public class RemotingCommand {
 
     public static byte[] markProtocolType(int source, SerializeType type) {
         byte[] result = new byte[4];
-
+        // code
         result[0] = type.getCode();
+        // 右移16位后再和255与->“16-24位”
         result[1] = (byte) ((source >> 16) & 0xFF);
+        // 右移8位后再和255与->“8-16位”
         result[2] = (byte) ((source >> 8) & 0xFF);
+        // 右移0位后再和255与->“8-0位”
         result[3] = (byte) (source & 0xFF);
         return result;
     }

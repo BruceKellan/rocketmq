@@ -91,7 +91,8 @@ public class MQClientInstance {
     private final long bootTimestamp = System.currentTimeMillis();
 
     /**
-     * key: group
+     * key: group 消费者组 -> MQProducerInner MQProducerInner是逻辑上的生产处理器
+     * 相同消费者组必定共用同一套生产消息的逻辑
      */
     private final ConcurrentMap<String, MQProducerInner> producerTable = new ConcurrentHashMap<String, MQProducerInner>();
 

@@ -88,10 +88,12 @@ import org.apache.rocketmq.remoting.exception.RemotingTooMuchRequestException;
 public class DefaultMQProducerImpl implements MQProducerInner {
     private final InternalLogger log = ClientLogger.getLog();
     private final Random random = new Random();
-    // 持有一个对DefaultMQProducer的引用
+    /**
+     * 持有一个对DefaultMQProducer的引用
+     */
     private final DefaultMQProducer defaultMQProducer;
     /**
-     * key：topic
+     * Key：Topic Value：Topic Metadata，包括发布的broker节点信息等
      */
     private final ConcurrentMap<String, TopicPublishInfo> topicPublishInfoTable = new ConcurrentHashMap<String, TopicPublishInfo>();
     private final ArrayList<SendMessageHook> sendMessageHookList = new ArrayList<SendMessageHook>();

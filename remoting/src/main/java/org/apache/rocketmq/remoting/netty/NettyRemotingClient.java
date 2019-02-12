@@ -150,12 +150,11 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
 
     @Override
     public void start() {
+        // 线程池
         this.defaultEventExecutorGroup = new DefaultEventExecutorGroup(
             nettyClientConfig.getClientWorkerThreads(),
             new ThreadFactory() {
-
                 private AtomicInteger threadIndex = new AtomicInteger(0);
-
                 @Override
                 public Thread newThread(Runnable r) {
                     return new Thread(r, "NettyClientWorkerThread_" + this.threadIndex.incrementAndGet());
@@ -183,13 +182,17 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
                     pipeline.addLast(
                         defaultEventExecutorGroup,
                         new NettyEncoder(),
+                        // 拆包逻辑
                         new NettyDecoder(),
+                        // Netty心跳检测
                         new IdleStateHandler(0, 0, nettyClientConfig.getClientChannelMaxIdleTimeSeconds()),
                         new NettyConnectManageHandler(),
+                        // 执行回调
                         new NettyClientHandler());
                 }
             });
 
+        // 原来是ResponseFuture执行成功的回调里面会执行里面的逻辑，后面被优化成异步定时轮询
         this.timer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
@@ -637,7 +640,7 @@ public class NettyRemotingClient extends NettyRemotingAbstract implements Remoti
         }
     }
 
-    class NettyConnectManageHandler extends ChannelDuplexHandler {
+    class  NettyConnectManageHandler extends ChannelDuplexHandler {
         @Override
         public void connect(ChannelHandlerContext ctx, SocketAddress remoteAddress, SocketAddress localAddress,
             ChannelPromise promise) throws Exception {

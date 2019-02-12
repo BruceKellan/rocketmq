@@ -30,7 +30,7 @@ public class TopicRouteData extends RemotingSerializable {
     private String orderTopicConf;
 
     /**
-     * 所有的队列信息，节点:队列 = 1:N
+     * 所有的队列信息，broker: queue = n: n
      */
     private List<QueueData> queueDatas;
 

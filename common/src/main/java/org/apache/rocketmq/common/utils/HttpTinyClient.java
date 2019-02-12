@@ -27,6 +27,9 @@ import java.util.List;
 import org.apache.rocketmq.common.MQVersion;
 import org.apache.rocketmq.common.MixAll;
 
+/**
+ * TODO why not use library for http？
+ */
 public class HttpTinyClient {
 
     static public HttpResult httpGet(String url, List<String> headers, List<String> paramValues,
