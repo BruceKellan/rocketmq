@@ -26,12 +26,13 @@ public class ThreadLocalIndex {
     private final Random random = new Random();
 
     public int getAndIncrement() {
-        // 从0开始
         Integer index = this.threadLocalIndex.get();
         if (null == index) {
+            // 从随机数开始，若随机数<0，则从0开始
             index = Math.abs(random.nextInt());
-            if (index < 0)
+            if (index < 0) {
                 index = 0;
+            }
             this.threadLocalIndex.set(index);
         }
         // 往上叠加，超出范围从0重新开始
