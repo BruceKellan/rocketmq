@@ -36,11 +36,8 @@ public class MappedFileQueue {
     private static final int DELETE_FILES_BATCH_MAX = 10;
 
     private final String storePath;
-
     private final int mappedFileSize;
-
     private final CopyOnWriteArrayList<MappedFile> mappedFiles = new CopyOnWriteArrayList<MappedFile>();
-
     private final AllocateMappedFileService allocateMappedFileService;
 
     private long flushedWhere = 0;
