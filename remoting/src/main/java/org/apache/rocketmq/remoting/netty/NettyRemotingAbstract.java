@@ -23,6 +23,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import java.net.SocketAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -35,6 +36,8 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
+import org.apache.rocketmq.logging.InternalLogger;
+import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.ChannelEventListener;
 import org.apache.rocketmq.remoting.InvokeCallback;
 import org.apache.rocketmq.remoting.RPCHook;
@@ -45,8 +48,6 @@ import org.apache.rocketmq.remoting.common.ServiceThread;
 import org.apache.rocketmq.remoting.exception.RemotingSendRequestException;
 import org.apache.rocketmq.remoting.exception.RemotingTimeoutException;
 import org.apache.rocketmq.remoting.exception.RemotingTooMuchRequestException;
-import org.apache.rocketmq.logging.InternalLogger;
-import org.apache.rocketmq.logging.InternalLoggerFactory;
 import org.apache.rocketmq.remoting.protocol.RemotingCommand;
 import org.apache.rocketmq.remoting.protocol.RemotingSysResponseCode;
 
@@ -63,24 +64,22 @@ public abstract class NettyRemotingAbstract {
     protected final Semaphore semaphoreOneway;
 
     /**
-     * default 65535
      * Semaphore to limit maximum number of on-going asynchronous requests, which protects system memory footprint.
      */
     protected final Semaphore semaphoreAsync;
 
     /**
      * This map caches all on-going requests.
-     * key: opaque , just a request id
      */
-    protected final ConcurrentMap<Integer, ResponseFuture> responseTable = new ConcurrentHashMap<Integer, ResponseFuture>(256);
+    protected final ConcurrentMap<Integer /* opaque */, ResponseFuture> responseTable =
+        new ConcurrentHashMap<Integer, ResponseFuture>(256);
 
     /**
      * This container holds all processors per request code, aka, for each incoming request, we may look up the
      * responding processor in this map to handle the request.
-     * key: request code
-     * 请求编码 -> 处理器，由于请求不在当前线程执行，使用这种方式进行异步执行
      */
-    protected final HashMap<Integer, Pair<NettyRequestProcessor, ExecutorService>> processorTable = new HashMap<Integer, Pair<NettyRequestProcessor, ExecutorService>>(64);
+    protected final HashMap<Integer/* request code */, Pair<NettyRequestProcessor, ExecutorService>> processorTable =
+        new HashMap<Integer, Pair<NettyRequestProcessor, ExecutorService>>(64);
 
     /**
      * Executor to feed netty events to user defined {@link ChannelEventListener}.
@@ -96,6 +95,13 @@ public abstract class NettyRemotingAbstract {
      * SSL context via which to create {@link SslHandler}.
      */
     protected volatile SslContext sslContext;
+
+    /**
+     * custom rpc hooks
+     */
+    protected List<RPCHook> rpcHooks = new ArrayList<RPCHook>();
+
+
 
     static {
         NettyLogger.initNettyLogger();
@@ -160,6 +166,23 @@ public abstract class NettyRemotingAbstract {
         }
     }
 
+    protected void doBeforeRpcHooks(String addr, RemotingCommand request) {
+        if (rpcHooks.size() > 0) {
+            for (RPCHook rpcHook: rpcHooks) {
+                rpcHook.doBeforeRequest(addr, request);
+            }
+        }
+    }
+
+    protected void doAfterRpcHooks(String addr, RemotingCommand request, RemotingCommand response) {
+        if (rpcHooks.size() > 0) {
+            for (RPCHook rpcHook: rpcHooks) {
+                rpcHook.doAfterResponse(addr, request, response);
+            }
+        }
+    }
+
+
     /**
      * Process incoming request command issued by remote peer.
      *
@@ -170,22 +193,15 @@ public abstract class NettyRemotingAbstract {
         final Pair<NettyRequestProcessor, ExecutorService> matched = this.processorTable.get(cmd.getCode());
         final Pair<NettyRequestProcessor, ExecutorService> pair = null == matched ? this.defaultRequestProcessor : matched;
         final int opaque = cmd.getOpaque();
+
         if (pair != null) {
             Runnable run = new Runnable() {
                 @Override
                 public void run() {
                     try {
-                        RPCHook rpcHook = NettyRemotingAbstract.this.getRPCHook();
-                        if (rpcHook != null) {
-                            rpcHook.doBeforeRequest(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd);
-                        }
-
+                        doBeforeRpcHooks(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd);
                         final RemotingCommand response = pair.getObject1().processRequest(ctx, cmd);
-
-                        // RPC HOOK
-                        if (rpcHook != null) {
-                            rpcHook.doAfterResponse(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd, response);
-                        }
+                        doAfterRpcHooks(RemotingHelper.parseChannelRemoteAddr(ctx.channel()), cmd, response);
 
                         if (!cmd.isOnewayRPC()) {
                             if (response != null) {
@@ -290,7 +306,6 @@ public abstract class NettyRemotingAbstract {
                     @Override
                     public void run() {
                         try {
-                            // A.
                             responseFuture.executeInvokeCallback();
                         } catch (Throwable e) {
                             log.warn("execute callback in executor exception, and callback throw", e);
@@ -306,10 +321,9 @@ public abstract class NettyRemotingAbstract {
         } else {
             runInThisThread = true;
         }
-        // A. B. 只会执行一个地方，目的都是执行回调
+
         if (runInThisThread) {
             try {
-                // B.
                 responseFuture.executeInvokeCallback();
             } catch (Throwable e) {
                 log.warn("executeInvokeCallback Exception", e);
@@ -319,12 +333,29 @@ public abstract class NettyRemotingAbstract {
         }
     }
 
+
+
     /**
      * Custom RPC hook.
-     *
-     * @return RPC hook if specified; null otherwise.
+     * Just be compatible with the previous version, use getRPCHooks instead.
      */
-    public abstract RPCHook getRPCHook();
+    @Deprecated
+    protected RPCHook getRPCHook() {
+        if (rpcHooks.size() > 0) {
+            return rpcHooks.get(0);
+        }
+        return null;
+    }
+
+    /**
+     * Custom RPC hooks.
+     *
+     * @return RPC hooks if specified; null otherwise.
+     */
+    public List<RPCHook> getRPCHooks() {
+        return rpcHooks;
+    }
+
 
     /**
      * This method specifies thread pool to use while invoking callback methods.
@@ -345,7 +376,7 @@ public abstract class NettyRemotingAbstract {
         while (it.hasNext()) {
             Entry<Integer, ResponseFuture> next = it.next();
             ResponseFuture rep = next.getValue();
-            // 在时间范围内的删掉
+
             if ((rep.getBeginTimestamp() + rep.getTimeoutMillis() + 1000) <= System.currentTimeMillis()) {
                 rep.release();
                 it.remove();
@@ -353,7 +384,7 @@ public abstract class NettyRemotingAbstract {
                 log.warn("remove timeout request, " + rep);
             }
         }
-        // 执行回调
+
         for (ResponseFuture rf : rfList) {
             try {
                 executeInvokeCallback(rf);
@@ -363,9 +394,11 @@ public abstract class NettyRemotingAbstract {
         }
     }
 
-    public RemotingCommand invokeSyncImpl(final Channel channel, final RemotingCommand request, final long timeoutMillis)
+    public RemotingCommand invokeSyncImpl(final Channel channel, final RemotingCommand request,
+        final long timeoutMillis)
         throws InterruptedException, RemotingSendRequestException, RemotingTimeoutException {
         final int opaque = request.getOpaque();
+
         try {
             final ResponseFuture responseFuture = new ResponseFuture(channel, opaque, timeoutMillis, null, null);
             this.responseTable.put(opaque, responseFuture);
@@ -379,12 +412,14 @@ public abstract class NettyRemotingAbstract {
                     } else {
                         responseFuture.setSendRequestOK(false);
                     }
+
                     responseTable.remove(opaque);
                     responseFuture.setCause(f.cause());
                     responseFuture.putResponse(null);
                     log.warn("send a request command to channel <" + addr + "> failed.");
                 }
             });
+
             RemotingCommand responseCommand = responseFuture.waitResponse(timeoutMillis);
             if (null == responseCommand) {
                 if (responseFuture.isSendRequestOK()) {
@@ -394,6 +429,7 @@ public abstract class NettyRemotingAbstract {
                     throw new RemotingSendRequestException(RemotingHelper.parseSocketAddressAddr(addr), responseFuture.getCause());
                 }
             }
+
             return responseCommand;
         } finally {
             this.responseTable.remove(opaque);
@@ -404,11 +440,8 @@ public abstract class NettyRemotingAbstract {
         final InvokeCallback invokeCallback)
         throws InterruptedException, RemotingTooMuchRequestException, RemotingTimeoutException, RemotingSendRequestException {
         long beginStartTime = System.currentTimeMillis();
-        // opaque = request id
         final int opaque = request.getOpaque();
-        // Semaphore https://www.cnblogs.com/XHJT/p/3910406.html
         boolean acquired = this.semaphoreAsync.tryAcquire(timeoutMillis, TimeUnit.MILLISECONDS);
-        // throttle
         if (acquired) {
             final SemaphoreReleaseOnlyOnce once = new SemaphoreReleaseOnlyOnce(this.semaphoreAsync);
             long costTime = System.currentTimeMillis() - beginStartTime;
@@ -416,11 +449,10 @@ public abstract class NettyRemotingAbstract {
                 once.release();
                 throw new RemotingTimeoutException("invokeAsyncImpl call timeout");
             }
-            // 根据opaque构造ResponseFuture
+
             final ResponseFuture responseFuture = new ResponseFuture(channel, opaque, timeoutMillis - costTime, invokeCallback, once);
             this.responseTable.put(opaque, responseFuture);
             try {
-                // netty 异步非阻塞 https://www.cnblogs.com/sorheart/p/3195099.html
                 channel.writeAndFlush(request).addListener(new ChannelFutureListener() {
                     @Override
                     public void operationComplete(ChannelFuture f) throws Exception {
