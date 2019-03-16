@@ -33,7 +33,6 @@ public class BrokerTest {
             messageStoreConfig.setFileReservedTime(48);
             messageStoreConfig.setFlushDiskType(FlushDiskType.ASYNC_FLUSH);
             messageStoreConfig.setDuplicationEnable(false);
-
             // 创建 BrokerController 对象，并启动
             BrokerController brokerController = new BrokerController(//
                     brokerConfig, //
@@ -42,7 +41,6 @@ public class BrokerTest {
                     messageStoreConfig);
             brokerController.initialize();
             brokerController.start();
-            // 睡觉，就不起来
             Thread.sleep(DateUtils.MILLIS_PER_DAY);
         }
     }

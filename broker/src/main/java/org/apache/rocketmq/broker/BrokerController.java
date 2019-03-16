@@ -865,6 +865,7 @@ public class BrokerController {
 
             @Override
             public void run() {
+                System.out.println("=> 往所有NameServer注册Broker，注册速率，最大不得超过60s，最小不得超过10s，默认30s");
                 try {
                     BrokerController.this.registerBrokerAll(true, false, brokerConfig.isForceRegister());
                 } catch (Throwable e) {
@@ -904,7 +905,7 @@ public class BrokerController {
 
     public synchronized void registerBrokerAll(final boolean checkOrderConfig, boolean oneway, boolean forceRegister) {
         TopicConfigSerializeWrapper topicConfigWrapper = this.getTopicConfigManager().buildTopicConfigSerializeWrapper();
-
+        // Clone
         if (!PermName.isWriteable(this.getBrokerConfig().getBrokerPermission())
             || !PermName.isReadable(this.getBrokerConfig().getBrokerPermission())) {
             ConcurrentHashMap<String, TopicConfig> topicConfigTable = new ConcurrentHashMap<String, TopicConfig>();
