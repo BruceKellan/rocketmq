@@ -97,7 +97,7 @@ public class MQClientInstance {
     private final ConcurrentMap<String, MQProducerInner> producerTable = new ConcurrentHashMap<String, MQProducerInner>();
 
     /**
-     * key: group
+     * key: group 消费者组 -> MQConsumerInner MQConsumerInner是逻辑上的消费处理器
      */
     private final ConcurrentMap<String, MQConsumerInner> consumerTable = new ConcurrentHashMap<String, MQConsumerInner>();
 
@@ -118,7 +118,7 @@ public class MQClientInstance {
     private final Lock lockHeartbeat = new ReentrantLock();
 
     /**
-     * Broker Name -> brokerId -> address
+     * Broker Name -> BrokerId -> Address
      */
     private final ConcurrentMap<String, HashMap<Long, String>> brokerAddrTable = new ConcurrentHashMap<String, HashMap<Long, String>>();
 
@@ -198,6 +198,7 @@ public class MQClientInstance {
         } else {
             List<QueueData> qds = route.getQueueDatas();
             Collections.sort(qds);
+            // 开始遍历queueData
             for (QueueData qd : qds) {
                 if (PermName.isWriteable(qd.getPerm())) {
                     BrokerData brokerData = null;
@@ -207,15 +208,14 @@ public class MQClientInstance {
                             break;
                         }
                     }
-
                     if (null == brokerData) {
                         continue;
                     }
-
+                    // 只有Master节点的Broker才能接收消息，对于非Master节点的需要过滤掉
                     if (!brokerData.getBrokerAddrs().containsKey(MixAll.MASTER_ID)) {
                         continue;
                     }
-
+                    // 按照QueueData配置的写队列个数，生成对应数量的MessageQueue。
                     for (int i = 0; i < qd.getWriteQueueNums(); i++) {
                         MessageQueue mq = new MessageQueue(topic, qd.getBrokerName(), i);
                         info.getMessageQueueList().add(mq);
@@ -505,7 +505,7 @@ public class MQClientInstance {
                     if (impl instanceof DefaultMQPushConsumerImpl) {
                         DefaultMQPushConsumerImpl dmq = (DefaultMQPushConsumerImpl) impl;
                         dmq.adjustThreadPool();
-                    }
+                       }
                 } catch (Exception e) {
                 }
             }

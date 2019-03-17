@@ -42,6 +42,9 @@ public class BrokerConfig {
     private long brokerId = MixAll.MASTER_ID;
     private int brokerPermission = PermName.PERM_READ | PermName.PERM_WRITE;
     private int defaultTopicQueueNums = 8;
+    /**
+     * 在Producer发送消息的时候，如果没有对应的Topic，那么这个时候会创建该Topic并投递消息
+     */
     @ImportantField
     private boolean autoCreateTopicEnable = true;
 

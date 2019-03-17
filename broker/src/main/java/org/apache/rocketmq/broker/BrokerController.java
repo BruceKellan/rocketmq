@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.broker;
 
+import com.brucekellan.LogHelper;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -865,7 +866,7 @@ public class BrokerController {
 
             @Override
             public void run() {
-                System.out.println("=> 往所有NameServer注册Broker，注册速率，最大不得超过60s，最小不得超过10s，默认30s");
+                LogHelper.log(1,  "往所有NameServer注册Broker，注册速率，最大不得超过60s，最小不得超过10s，默认30s");
                 try {
                     BrokerController.this.registerBrokerAll(true, false, brokerConfig.isForceRegister());
                 } catch (Throwable e) {

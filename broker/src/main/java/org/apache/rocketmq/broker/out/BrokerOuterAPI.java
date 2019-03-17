@@ -16,6 +16,7 @@
  */
 package org.apache.rocketmq.broker.out;
 
+import com.brucekellan.LogHelper;
 import com.google.common.collect.Lists;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
@@ -143,6 +144,7 @@ public class BrokerOuterAPI {
             requestHeader.setBodyCrc32(bodyCrc32);
             final CountDownLatch countDownLatch = new CountDownLatch(nameServerAddressList.size());
             for (final String namesrvAddr : nameServerAddressList) {
+                LogHelper.log(2, "往%s注册Broker，RequestHeader：%s", namesrvAddr, requestHeader);
                 brokerOuterExecutor.execute(new Runnable() {
                     @Override
                     public void run() {
